@@ -1,0 +1,8 @@
+# Visual studio code configs and stuff
+.vscode/*
+
+# Paint.net files :P
+*.pdn
+
+# Photoshop files for the rich
+*.psd

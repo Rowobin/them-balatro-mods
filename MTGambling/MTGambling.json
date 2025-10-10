@@ -1,0 +1,13 @@
+{
+    "id": "MTG",
+    "name": "MTGambling",
+    "author": ["shadyAF"],
+    "description": "Magic The Gambling",
+    "prefix": "mtgg",
+    "main_file": "MTG.lua",
+    "badge_colour": "cca652",
+    "dependencies": [
+        "Steamodded (>=1.0.0~ALPHA-1225a)"
+    ],
+    "version": "1.0.0"
+}
