@@ -55,14 +55,15 @@ SMODS.Joker {
 	},
 	config = { extra = { money = 2 } },
 	rarity = 2,
+	blueprint_compat = false,
 	atlas = 'TherosBD',
 	pos = { x = 1, y = 0 },
-	cost = 6,
+	cost = 5,
 	loc_vars = function(self, info_queue, card)
 		return { vars = { card.ability.extra.money } }
 	end,
 	calculate = function(self, card, context)
-		if not context.blueprint and context.destroying_card and context.scoring_name == "Pair" and #context.full_hand == 2 then
+		if not context.blueprint and context.destroy_card and context.scoring_name == "Pair" and #context.full_hand == 2 then
 			return {
 				dollars = card.ability.extra.money,
 				remove = true
@@ -327,6 +328,69 @@ SMODS.Joker {
 			return {
 				message = 'Card destroyed!',
 			}
+
+		end
+
+	end
+}
+
+SMODS.Joker {
+	key = 'thassa_deep',
+	loc_txt = {
+		name = 'Thassa, Deep-Dwelling',
+		text = {
+			"{C:attention}Destroy{} the first played hand",
+			"and create it again {C:attention}after{} draw",
+		}
+	},
+	config = { extra = { hand = {}, regenerate = false } },
+	rarity = 3,
+	blueprint_compat = false,
+	atlas = 'TherosBD',
+	pos = { x = 0, y = 1 },
+	cost = 7,
+	calculate = function(self, card, context)
+		if not context.blueprint and context.destroy_card and context.cardarea == G.play and G.GAME.current_round.hands_played == 0 then
+
+			card.ability.extra.hand[#card.ability.extra.hand+1] = context.destroying_card
+
+			if not card.ability.extra.regenerate then
+				card.ability.extra.regenerate = true
+			end
+
+			return {
+				remove = true
+			}
+		end
+
+		if context.hand_drawn and card.ability.extra.regenerate then
+			
+			return {
+				message = "Regenerated!",
+				func = function()
+					G.E_MANAGER:add_event(Event({
+						func = function()
+							local _first_dissolve = nil
+							local _card = nil
+							for _, create_card in ipairs(card.ability.extra.hand) do
+								_card = copy_card(create_card, nil, nil, G.playing_card)
+								G.playing_card = (G.playing_card and G.playing_card + 1) or 1
+								_card:add_to_deck()
+								G.deck.config.card_limit = G.deck.config.card_limit + 1
+								table.insert(G.playing_cards, _card)
+								G.hand:emplace(_card)
+								_card:start_materialize(nil, _first_dissolve)
+								_first_dissolve = true
+							end
+							SMODS.calculate_context({ playing_card_added = true, cards = card.ability.extra.hand })
+							card.ability.extra.hand = {}
+							card.ability.extra.regenerate = false
+							return true
+						end
+					}))
+				end
+			}
+
 
 		end
 
