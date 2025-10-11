@@ -379,12 +379,14 @@ SMODS.Joker {
 								G.deck.config.card_limit = G.deck.config.card_limit + 1
 								table.insert(G.playing_cards, _card)
 								G.hand:emplace(_card)
+								SMODS.recalc_debuff(_card)
 								_card:start_materialize(nil, _first_dissolve)
 								_first_dissolve = true
 							end
 							SMODS.calculate_context({ playing_card_added = true, cards = card.ability.extra.hand })
 							card.ability.extra.hand = {}
 							card.ability.extra.regenerate = false
+							save_run()
 							return true
 						end
 					}))
