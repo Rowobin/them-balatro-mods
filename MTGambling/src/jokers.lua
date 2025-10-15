@@ -258,7 +258,7 @@ SMODS.Joker {
   	},
 	rarity = 3,
 	atlas = 'TherosBD',
-	blueprint_compat = true,
+	blueprint_compat = false,
 	pos = { x = 5, y = 0 },
 	cost = 8,
 
@@ -345,14 +345,14 @@ SMODS.Joker {
 	},
 	config = { extra = { hand = {}, regenerate = false } },
 	rarity = 3,
-	blueprint_compat = false,
+	blueprint_compat = true,
 	atlas = 'TherosBD',
 	pos = { x = 0, y = 1 },
 	cost = 8,
 	calculate = function(self, card, context)
 		if not context.blueprint and context.destroy_card and context.cardarea == G.play and G.GAME.current_round.hands_played == 0 then
 
-			card.ability.extra.hand[#card.ability.extra.hand+1] = context.destroying_card
+			card.ability.extra.hand[#card.ability.extra.hand+1] = context.destroying_card:save()
 
 			if not card.ability.extra.regenerate then
 				card.ability.extra.regenerate = true
@@ -365,6 +365,8 @@ SMODS.Joker {
 
 		if context.hand_drawn and card.ability.extra.regenerate then
 			
+			local blueprint = context.blueprint
+
 			return {
 				message = "Regenerated!",
 				func = function()
@@ -372,20 +374,27 @@ SMODS.Joker {
 						func = function()
 							local _first_dissolve = nil
 							local _card = nil
-							for _, create_card in ipairs(card.ability.extra.hand) do
-								_card = copy_card(create_card, nil, nil, G.playing_card)
-								G.playing_card = (G.playing_card and G.playing_card + 1) or 1
-								_card:add_to_deck()
-								G.deck.config.card_limit = G.deck.config.card_limit + 1
-								table.insert(G.playing_cards, _card)
-								G.hand:emplace(_card)
-								SMODS.recalc_debuff(_card)
-								_card:start_materialize(nil, _first_dissolve)
-								_first_dissolve = true
+							for _, create_card_table in ipairs(card.ability.extra.hand) do
+								_card = Card(0, 0, G.CARD_W, G.CARD_H, G.P_CENTERS.j_joker, G.P_CENTERS.c_base)
+								_card:load(create_card_table,nil)
+								_card:hard_set_T()
+								-- _card = copy_card(_create_card, nil, nil, G.playing_card)
+								-- G.playing_card = (G.playing_card and G.playing_card + 1) or 1
+								if (_card) then
+									_card:add_to_deck()
+									G.deck.config.card_limit = G.deck.config.card_limit + 1
+									table.insert(G.playing_cards, _card)
+									G.hand:emplace(_card)
+									SMODS.recalc_debuff(_card)
+									_card:start_materialize(nil, _first_dissolve)
+									_first_dissolve = true
+								end
 							end
 							SMODS.calculate_context({ playing_card_added = true, cards = card.ability.extra.hand })
-							card.ability.extra.hand = {}
-							card.ability.extra.regenerate = false
+							if (not blueprint) then
+								card.ability.extra.hand = {}
+								card.ability.extra.regenerate = false
+							end
 							save_run()
 							return true
 						end
@@ -409,7 +418,7 @@ SMODS.Joker {
 		}
 	},
 	rarity = 3,
-	blueprint_compat = false,
+	blueprint_compat = true,
 	atlas = 'TherosBD',
 	pos = { x = 1, y = 1 },
 	cost = 8,
@@ -433,6 +442,75 @@ SMODS.Joker {
 		end
 	end
 }
+
+SMODS.Joker {
+	key = 'heliod_sun',
+	loc_txt = {
+		name = 'Heliod, Sun-Crowned',
+		text = {
+			"{X:mult,C:white}X#1#{} Mult per {C:attention}Gold{} card played.",
+			"if no {C:attention}Gold{} cards were played",
+			"{C:green}#2#{} in #3# chance of transforming",
+			"each played card into a {C:attention}Gold{} card"
+		}
+	},
+	rarity = 3,
+	blueprint_compat = true,
+	atlas = 'TherosBD',
+	pos = { x = 2, y = 1 },
+	cost = 8,
+	config = { extra = { xmult = 0.50, gold_count = 0, odds = 2 } },
+	loc_vars = function(self, info_queue, card)
+		info_queue[#info_queue + 1] = G.P_CENTERS.m_gold
+		local numerator, denominator = SMODS.get_probability_vars(card, 1, card.ability.extra.odds, 'j_mtgg_heliod_sun')
+		return { vars = { card.ability.extra.xmult, numerator, denominator } }
+	end,
+	calculate = function(self, card, context)
+
+		if context.before and not context.blueprint then
+			
+			card.ability.extra.gold_count = 0
+			for _, played_card in pairs(context.full_hand) do
+				if SMODS.has_enhancement(played_card, 'm_gold') then
+					card.ability.extra.gold_count = card.ability.extra.gold_count + 1
+				end
+			end
+
+			if card.ability.extra.gold_count == 0 then
+				
+				for _, scored_card in ipairs(context.full_hand) do
+					if (SMODS.pseudorandom_probability(card, 'j_mtgg_heliod_sun', 1, card.ability.extra.odds)) then
+						scored_card:set_ability('m_gold', nil, true)
+						card.ability.extra.gold_count = card.ability.extra.gold_count + 1
+						G.E_MANAGER:add_event(Event({
+							func = function()
+								scored_card:juice_up()
+								return true
+							end
+						}))
+					end
+            	end
+
+				if card.ability.extra.gold_count > 0 then
+					return {
+						message = "Blessed!",
+                    	colour = G.C.MONEY
+					}
+				end
+
+			end
+
+		end
+
+		if context.joker_main then
+			return {
+				xmult = 1 + card.ability.extra.xmult * card.ability.extra.gold_count
+			}
+		end
+
+	end
+}
+
 
 function Get_hand_planet(hand)
 	for _, v in ipairs(G.P_CENTER_POOLS.Planet) do
