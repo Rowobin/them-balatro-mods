@@ -511,6 +511,59 @@ SMODS.Joker {
 	end
 }
 
+SMODS.Joker {
+	key = 'nylea_keen',
+	loc_txt = {
+		name = 'Nylea, Keen-Eyed',
+		text = {
+			"Increase the rank of",
+			"every played card with",
+			"a lower rank than the",
+			"{C:attention}first{} played card by {C:attention}#1#{}"
+		}
+	},
+	rarity = 3,
+	blueprint_compat = true,
+	atlas = 'TherosBD',
+	pos = { x = 3, y = 1 },
+	cost = 7,
+	config = { extra = { increase = 1} },
+	loc_vars = function(self, info_queue, card)
+		return { vars = { card.ability.extra.increase } }
+	end,
+	calculate = function(self, card, context)
+
+		if context.after then
+			
+			local highest_card_rank = context.full_hand[1]:get_id()
+			local was_activated = false
+
+			for _, played_card in pairs(context.full_hand) do
+				if played_card:get_id() < highest_card_rank then
+					was_activated = true
+					G.E_MANAGER:add_event(Event({
+					func = function()
+						played_card:juice_up()
+						assert(SMODS.modify_rank(played_card, card.ability.extra.increase))
+						return true
+					end
+					}))
+				end
+			end
+
+			if was_activated then
+				
+				return {
+					message = "Strengthened!"
+				}
+
+			end
+
+		end
+
+	end
+}
+
 
 function Get_hand_planet(hand)
 	for _, v in ipairs(G.P_CENTER_POOLS.Planet) do
