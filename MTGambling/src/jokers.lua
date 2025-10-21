@@ -239,16 +239,20 @@ SMODS.Joker {
 			"Creates a {C:edition}Polychrome{} copy of",
 			"the most played card with a {C:red}Red Seal{}",
 			"that is {C:attention}destroyed{} at round end",
-			"{C:inactive}(Currently #1# played #2# times){}"
+			"{C:inactive}#1#{}"
 		}
 	},
 	loc_vars = function(self, info_queue, card)
 		info_queue[#info_queue + 1] = G.P_CENTERS.e_polychrome
-		local card_name = "Unknown"
+		local card_name = nil
 		if card.ability.extra.created_card and card.ability.extra.created_card.base then
 			card_name = card.ability.extra.created_card.base.name
 		end
-		return { vars = { card_name, card.ability.extra.times_played } }
+		local current_info = ""
+		if card_name then
+			current_info = "(Currently " .. card_name .. " played " .. card.ability.extra.times_played .. " times)"
+		end
+		return { vars = { current_info } }
 	end,
 	config = {
 		extra = {
@@ -261,6 +265,21 @@ SMODS.Joker {
 	blueprint_compat = false,
 	pos = { x = 5, y = 0 },
 	cost = 8,
+	set_ability = function (self, card, initial, delay_sprites)
+		if (G.playing_cards) then
+			local max_played_count = -1
+			local max_played_card = G.playing_cards[0]
+			for _, deck_card in pairs(G.playing_cards) do
+				if deck_card.base.times_played > max_played_count then
+					max_played_count = deck_card.base.times_played
+					max_played_card = deck_card
+				end
+			end
+
+			card.ability.extra.created_card = max_played_card
+			card.ability.extra.times_played = max_played_count
+		end
+	end,
 
 	calculate = function(self, card, context)
 
@@ -587,9 +606,11 @@ SMODS.Joker {
 	end,
 	add_to_deck = function(self, card, from_debuff)
         G.GAME.round_resets.hands = G.GAME.round_resets.hands + card.ability.extra.extra_hands
+		ease_hands_played(card.ability.extra.extra_hands)
     end,
     remove_from_deck = function(self, card, from_debuff)
         G.GAME.round_resets.hands = G.GAME.round_resets.hands - card.ability.extra.extra_hands
+		ease_hands_played(-card.ability.extra.extra_hands)
     end,
 	calculate = function(self, card, context)
 
@@ -631,9 +652,11 @@ SMODS.Joker {
 	end,
 	add_to_deck = function(self, card, from_debuff)
         G.GAME.round_resets.hands = G.GAME.round_resets.hands + card.ability.extra.extra_hands
+		ease_hands_played(card.ability.extra.extra_hands)
     end,
     remove_from_deck = function(self, card, from_debuff)
         G.GAME.round_resets.hands = G.GAME.round_resets.hands - card.ability.extra.extra_hands
+		ease_hands_played(-card.ability.extra.extra_hands)
     end,
 	calculate = function(self, card, context)
 
@@ -649,6 +672,93 @@ SMODS.Joker {
 	end
 }
 
+SMODS.Joker {
+	key = 'kroxa_bound',
+	loc_txt = {
+		name = 'Kroxa, Bound Titan',
+		text = {
+			"{X:mult,C:white}X#1#{} Mult",
+			"{C:red}+#2#{} discards",
+			"This card is {C:attention}destroyed{}",
+			"at the end of the round"
+		}
+	},
+	no_pool_flag = "kroxa_bound_destroyed",
+	rarity = 1,
+	blueprint_compat = true,
+	atlas = 'TherosBD',
+	pos = { x = 0, y = 2 },
+	cost = 5,
+	config = { extra = { xmult = 2, extra_discards = 1} },
+	loc_vars = function(self, info_queue, card)
+		return { vars = { card.ability.extra.xmult, card.ability.extra.extra_discards } }
+	end,
+	add_to_deck = function(self, card, from_debuff)
+        G.GAME.round_resets.discards = G.GAME.round_resets.discards + card.ability.extra.extra_discards
+		ease_discard(card.ability.extra.extra_discards)
+    end,
+    remove_from_deck = function(self, card, from_debuff)
+        G.GAME.round_resets.discards = G.GAME.round_resets.discards - card.ability.extra.extra_discards
+		ease_discard(-card.ability.extra.extra_discards)
+    end,
+	calculate = function(self, card, context)
+
+		if context.joker_main then
+			return {
+				x_mult = card.ability.extra.xmult
+			}
+		end
+
+		if context.end_of_round and not context.blueprint then
+			SMODS.destroy_cards(card, nil, nil, true)
+			G.GAME.pool_flags.kroxa_bound_destroyed = true
+			return {
+				message = "Escaped!"
+			}
+		end
+
+	end
+}
+
+SMODS.Joker {
+	key = 'kroxa_titan',
+	loc_txt = {
+		name = 'Kroxa, Titan of Death\'s Hunger',
+		text = {
+			"{X:mult,C:white}X#1#{} Mult",
+			"{C:red}+#2#{} discards"
+		}
+	},
+	rarity = 1,
+	blueprint_compat = true,
+	atlas = 'TherosBD',
+	pos = { x = 1, y = 2 },
+	cost = 5,
+	config = { extra = { xmult = 2, extra_discards = 1} },
+	loc_vars = function(self, info_queue, card)
+		return { vars = { card.ability.extra.xmult, card.ability.extra.extra_discards } }
+	end,
+	add_to_deck = function(self, card, from_debuff)
+        G.GAME.round_resets.discards = G.GAME.round_resets.discards + card.ability.extra.extra_discards
+		ease_discard(card.ability.extra.extra_discards)
+    end,
+    remove_from_deck = function(self, card, from_debuff)
+        G.GAME.round_resets.discards = G.GAME.round_resets.discards - card.ability.extra.extra_discards
+		ease_discard(-card.ability.extra.extra_discards)
+    end,
+	calculate = function(self, card, context)
+
+		if context.joker_main then
+			return {
+				x_mult = card.ability.extra.xmult
+			}
+		end
+
+	end,
+	in_pool = function (self, args)
+		return G.GAME.pool_flags.kroxa_bound_destroyed
+	end
+}
 
 function Get_hand_planet(hand)
 	for _, v in ipairs(G.P_CENTER_POOLS.Planet) do
