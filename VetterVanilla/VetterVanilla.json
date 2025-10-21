@@ -1,0 +1,11 @@
+{
+  "id": "VetterVanilla",
+  "name": "VetterVanilla",
+  "author": ["rowobin"],
+  "description": "A mod that adds cool stuff to Balatro, without straying to far from the original game's concepts.",
+  "prefix": "vv",
+  "main_file": "VetterVanilla.lua",
+  "badge_colour": "292323",
+  "dependencies": ["Steamodded (>=1.0.0~ALPHA-1225a)"],
+  "version": "0.0.1"
+}
