@@ -600,7 +600,7 @@ SMODS.Joker {
 	atlas = 'TherosBD',
 	pos = { x = 4, y = 1 },
 	cost = 4,
-	config = { extra = { xchips = 2, extra_hands = 1} },
+	config = { extra = { xchips = 3, extra_hands = 1} },
 	loc_vars = function(self, info_queue, card)
 		return { vars = { card.ability.extra.xchips, card.ability.extra.extra_hands } }
 	end,
@@ -646,7 +646,7 @@ SMODS.Joker {
 	atlas = 'TherosBD',
 	pos = { x = 5, y = 1 },
 	cost = 5,
-	config = { extra = { xchips = 2, extra_hands = 1} },
+	config = { extra = { xchips = 3, extra_hands = 1} },
 	loc_vars = function(self, info_queue, card)
 		return { vars = { card.ability.extra.xchips, card.ability.extra.extra_hands } }
 	end,
