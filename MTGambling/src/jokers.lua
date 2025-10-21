@@ -564,6 +564,91 @@ SMODS.Joker {
 	end
 }
 
+SMODS.Joker {
+	key = 'uro_bound',
+	loc_txt = {
+		name = 'Uro, Bound Titan',
+		text = {
+			"{X:chips,C:white}X#1#{} Chips",
+			"{C:blue}+#2#{} hands",
+			"This card is {C:attention}destroyed{}",
+			"at the end of the round"
+		}
+	},
+	no_pool_flag = "uro_bound_destroyed",
+	rarity = 1,
+	blueprint_compat = true,
+	atlas = 'TherosBD',
+	pos = { x = 4, y = 1 },
+	cost = 4,
+	config = { extra = { xchips = 2, extra_hands = 1} },
+	loc_vars = function(self, info_queue, card)
+		return { vars = { card.ability.extra.xchips, card.ability.extra.extra_hands } }
+	end,
+	add_to_deck = function(self, card, from_debuff)
+        G.GAME.round_resets.hands = G.GAME.round_resets.hands + card.ability.extra.extra_hands
+    end,
+    remove_from_deck = function(self, card, from_debuff)
+        G.GAME.round_resets.hands = G.GAME.round_resets.hands - card.ability.extra.extra_hands
+    end,
+	calculate = function(self, card, context)
+
+		if context.joker_main then
+			return {
+				x_chips = card.ability.extra.xchips
+			}
+		end
+
+		if context.end_of_round and not context.blueprint then
+			SMODS.destroy_cards(card, nil, nil, true)
+			G.GAME.pool_flags.uro_bound_destroyed = true
+			return {
+				message = "Escaped!"
+			}
+		end
+
+	end
+}
+
+SMODS.Joker {
+	key = 'uro_titan',
+	loc_txt = {
+		name = 'Uro, Titan of Nature\'s Wrath',
+		text = {
+			"{X:chips,C:white}X#1#{} Chips",
+			"{C:blue}+#2#{} hands"
+		}
+	},
+	yes_pool_flag = "uro_bound_destroyed",
+	rarity = 1,
+	blueprint_compat = true,
+	atlas = 'TherosBD',
+	pos = { x = 5, y = 1 },
+	cost = 5,
+	config = { extra = { xchips = 2, extra_hands = 1} },
+	loc_vars = function(self, info_queue, card)
+		return { vars = { card.ability.extra.xchips, card.ability.extra.extra_hands } }
+	end,
+	add_to_deck = function(self, card, from_debuff)
+        G.GAME.round_resets.hands = G.GAME.round_resets.hands + card.ability.extra.extra_hands
+    end,
+    remove_from_deck = function(self, card, from_debuff)
+        G.GAME.round_resets.hands = G.GAME.round_resets.hands - card.ability.extra.extra_hands
+    end,
+	calculate = function(self, card, context)
+
+		if context.joker_main then
+			return {
+				x_chips = card.ability.extra.xchips
+			}
+		end
+
+	end,
+	in_pool = function (self, args)
+		return G.GAME.pool_flags.uro_bound_destroyed
+	end
+}
+
 
 function Get_hand_planet(hand)
 	for _, v in ipairs(G.P_CENTER_POOLS.Planet) do
