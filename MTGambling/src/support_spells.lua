@@ -28,7 +28,7 @@ SMODS.Consumable {
     loc_txt = {
 		name = 'Erebos\' favour',
 		text = {
-			"Lose {C:money}#1#${} and draw #1# at next draw.",
+			"Lose {C:money}#1#${} and draw #1#.",
             "Whenever a card is {C:attention}destroyed{}",
             "increase the {C:money}cost{} and draw count by #2#."
 		}
@@ -56,7 +56,7 @@ SMODS.Consumable {
         delay(0.6)
     end,
     can_use = function(self, card)
-        return G.GAME.dollars >= card.ability.extra.money
+        return G.GAME.dollars >= G.GAME.bankrupt_at + card.ability.extra.money
     end,
     calculate = function(self, card, context)
 		if context.remove_playing_cards and context.removed and #context.removed > 0 then
