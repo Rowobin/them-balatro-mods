@@ -280,7 +280,11 @@ SMODS.Joker {
 			card.ability.extra.times_played = max_played_count
 		end
 	end,
-
+	remove_from_deck = function (self, card, from_debuff)
+		if (card.ability.extra.created_card and G.GAME.blind and G.GAME.blind.chips > 0) then
+			SMODS.destroy_cards(card.ability.extra.created_card,false,true)
+		end
+	end,
 	calculate = function(self, card, context)
 
 		local get_most_played_card = function ()

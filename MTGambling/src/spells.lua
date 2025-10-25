@@ -11,7 +11,7 @@ SMODS.ConsumableType {
  	},
     primary_colour = HEX('ff3333'),
     secondary_colour = HEX('ff3333'),
-    collection_rows = { 4, 3 },
+    collection_rows = { 5, 4 },
     shop_rate = 4
 }
 
@@ -120,34 +120,34 @@ SMODS.Consumable {
     use = function(self, card, area, copier)
 
         SMODS.draw_cards(card.ability.extra.amount)
-
-        delay(0.5)
         
-        local temp_hand = {}
-        for _, playing_card in ipairs(G.hand.cards) do temp_hand[#temp_hand + 1] = playing_card end
-        table.sort(temp_hand,
-            function(a, b)
-                return a:get_id() < b: get_id()
-            end
-        )
-
-        local destroyed_cards = {}
-        for i = 1, card.ability.extra.amount do destroyed_cards[#destroyed_cards + 1] = temp_hand[i] end
-
         G.E_MANAGER:add_event(Event({
             trigger = 'after',
             delay = 0.4,
             func = function()
+
+                local temp_hand = {}
+                for _, playing_card in ipairs(G.hand.cards) do temp_hand[#temp_hand + 1] = playing_card end
+                table.sort(temp_hand,
+                    function(a, b)
+                        return a:get_id() < b: get_id()
+                    end
+                )
+
+                local destroyed_cards = {}
+                for i = 1, card.ability.extra.amount do destroyed_cards[#destroyed_cards + 1] = temp_hand[i] end
+
+                SMODS.destroy_cards(destroyed_cards)
                 play_sound('tarot1')
                 card:juice_up(0.3, 0.5)
+
+                delay(0.5)
+                ease_dollars(-card.ability.extra.amount)
+                delay(0.3)
+
                 return true
             end
         }))
-        SMODS.destroy_cards(destroyed_cards)
-
-        delay(0.5)
-        ease_dollars(-card.ability.extra.amount)
-        delay(0.3)
 
     end,
     can_use = function (self, card)
@@ -286,8 +286,7 @@ SMODS.Consumable {
     loc_txt = {
 		name = 'Sea God\'s Scorn',
 		text = {
-            "{C:blue}Draw{} the {C:attention}highest{} score {C:blue}hand{}",
-            "of the previous round"
+            "{C:blue}Draw{} the {C:attention}highest{} score {C:blue}hand{}"
 		}
 	},
 	atlas = 'TherosBD_spells',
@@ -317,5 +316,126 @@ SMODS.Consumable {
         return false
     end
 }
+
+SMODS.Consumable {
+    key = "underworld_fires",
+    set = "spells",
+    loc_txt = {
+		name = 'Underworld Fires',
+		text = {
+            "Reduce {C:attention}rank{} of up to #1#",
+            "selected cards by {C:red}#2#{}.",
+            "If the selected card's rank",
+            "would go below {C:attention}#3#{} destroy it"
+		}
+	},
+	atlas = 'TherosBD_spells',
+    pos = {x = 6 , y = 0},
+    cost = 2,
+    config = { extra = { hightlight_limit = 3, rank_decrease = 1, destroy_threshold = 2 } },
+    loc_vars = function(self, info_queue, card)
+		return { vars = { card.ability.extra.hightlight_limit, card.ability.extra.rank_decrease, card.ability.extra.destroy_threshold } }
+	end,
+    use = function(self, card, area, copier)
+
+        local destroy_cards = {}
+        local rank_down_cards = {}
+        for _, highlighted_card in pairs(G.hand.highlighted) do
+            if (highlighted_card:get_id()-card.ability.extra.rank_decrease < card.ability.extra.destroy_threshold) then
+                destroy_cards[#destroy_cards+1] = highlighted_card
+            else
+                assert(SMODS.modify_rank(highlighted_card,-card.ability.extra.rank_decrease))
+                G.E_MANAGER:add_event(Event({
+                trigger = 'after',
+                delay = 0.2,
+                func = function()
+                    play_sound('timpani')
+                    highlighted_card:juice_up()
+                    return true
+                end
+            }))
+            end
+        end
+
+
+        if destroy_cards then
+            G.E_MANAGER:add_event(Event({
+                trigger = 'after',
+                delay = 0.2,
+                func = function()
+                    SMODS.destroy_cards(destroy_cards)
+                    return true
+                end
+            }))
+        end
+
+    end,
+    can_use = function (self, card)
+        return G.hand and #G.hand.highlighted > 0 and #G.hand.highlighted <= card.ability.extra.hightlight_limit
+    end
+}
+
+SMODS.Consumable {
+    key = "purphoros_intervention",
+    set = "spells",
+    loc_txt = {
+		name = 'Purphoros\' Intervention',
+		text = {
+            "Create a card of rank {C:attention}#1#{}",
+            "with a random seal.",
+            "The card's rank {C:attention}increases{} by {C:red}#2#{}",
+            "for each card {C:red}discarded{} this round",
+            "{C:inactive}(Max: Ace){}"
+		}
+	},
+	atlas = 'TherosBD_spells',
+    pos = {x = 7 , y = 0},
+    cost = 3,
+    config = { extra = { initial_rank = 2, current_rank = 2, rank_increase = 1} },
+    loc_vars = function(self, info_queue, card)
+		return { vars = { get_name_from_id(card.ability.extra.current_rank), card.ability.extra.rank_increase } }
+	end,
+    use = function(self, card, area, copier)
+
+        SMODS.add_card { set = "Playing Card", seal = SMODS.poll_seal({guaranteed = true}),rank = get_name_from_id(card.ability.extra.current_rank), area = G.hand }
+
+    end,
+    calculate = function (self, card, context)
+        
+        if (context.discard) then
+            if card.ability.extra.current_rank < 14 then
+                card.ability.extra.current_rank = card.ability.extra.current_rank + card.ability.extra.rank_increase
+            end
+        end
+
+        if (context.end_of_round) then
+            card.ability.extra.current_rank = card.ability.extra.initial_rank
+        end
+
+    end,
+    can_use = function (self, card)
+        if G.hand and G.hand.cards then
+            return G.GAME.blind and G.GAME.blind.chips > 0
+        end
+        return false
+    end
+}
+
+function get_name_from_id(id)
+    if id <= 10 then
+        return id
+    end
+
+    if id == 11 then
+        return "Jack"
+    elseif id == 12 then
+        return "Queen"
+    elseif id == 13 then
+        return "King"
+    else
+        return "Ace"
+    end
+
+end
 
 
