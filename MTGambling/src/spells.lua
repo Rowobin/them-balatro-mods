@@ -357,8 +357,7 @@ SMODS.Consumable {
             end
         end
 
-
-        if destroy_cards then
+        if #destroy_cards > 0 then
             G.E_MANAGER:add_event(Event({
                 trigger = 'after',
                 delay = 0.2,
@@ -368,6 +367,17 @@ SMODS.Consumable {
                 end
             }))
         end
+
+        delay(0.2)
+
+        G.E_MANAGER:add_event(Event({
+            trigger = 'after',
+            delay = 0.2,
+            func = function()
+                G.hand:unhighlight_all()
+                return true
+            end
+        }))
 
     end,
     can_use = function (self, card)
