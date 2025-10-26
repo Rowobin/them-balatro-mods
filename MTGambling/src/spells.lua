@@ -368,8 +368,6 @@ SMODS.Consumable {
             }))
         end
 
-        delay(0.2)
-
         G.E_MANAGER:add_event(Event({
             trigger = 'after',
             delay = 0.2,
@@ -425,6 +423,79 @@ SMODS.Consumable {
     end,
     can_use = function (self, card)
         if G.hand and G.hand.cards then
+            return G.GAME.blind and G.GAME.blind.chips > 0
+        end
+        return false
+    end
+}
+
+SMODS.Consumable {
+    key = "klothys_desing",
+    set = "spells",
+    loc_txt = {
+		name = 'Klothys\' Design',
+		text = {
+            "Cards played next hand",
+            "permanently gain {C:chips}+#1#{} chips when {C:attention}scored{}.",
+            "Amount of chips increases by {C:blue}#2#{}",
+            "for each scored card this round"
+		}
+	},
+	atlas = 'TherosBD_spells',
+    pos = {x = 8 , y = 0},
+    cost = 4,
+    config = { extra = { initial_chips = 2, current_chips = 2, chips_increase = 2, used = false} },
+    loc_vars = function(self, info_queue, card)
+		return { vars = { card.ability.extra.current_chips, card.ability.extra.chips_increase } }
+	end,
+    use = function(self, card, area, copier)
+
+        card.ability.extra.used = true
+
+        local eval = function() return card.ability.extra.used end
+        juice_card_until(card, eval, true)
+
+    end,
+    calculate = function (self, card, context)
+        
+        if context.individual and context.cardarea == G.play then
+
+            if card.ability.extra.used then
+                context.other_card.ability.perma_bonus = (context.other_card.ability.perma_bonus or 0) +
+                card.ability.extra.current_chips
+                return {
+                    message = "Enhanced!",
+                    colour = G.C.CHIPS
+                }
+            else
+                card.ability.extra.current_chips = card.ability.extra.current_chips + card.ability.extra.chips_increase
+            end
+
+
+        end
+
+        if context.after and card.ability.extra.used then
+            
+            G.E_MANAGER:add_event(Event({
+                trigger = 'after',
+                delay = 0.2,
+                func = function()
+                    SMODS.destroy_cards(card,true)
+                    return true
+                end
+            }))
+        end
+
+        if context.end_of_round then
+            card.ability.extra.current_chips = card.ability.extra.initial_chips
+        end
+
+    end,
+    keep_on_use = function (self, card)
+        return true
+    end,
+    can_use = function (self, card)
+        if not card.ability.extra.used and G.hand and G.hand.cards then
             return G.GAME.blind and G.GAME.blind.chips > 0
         end
         return false
