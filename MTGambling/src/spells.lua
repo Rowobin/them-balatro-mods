@@ -11,7 +11,7 @@ SMODS.ConsumableType {
  	},
     primary_colour = HEX('ff3333'),
     secondary_colour = HEX('ff3333'),
-    collection_rows = { 5, 4 },
+    collection_rows = { 5, 5 },
     shop_rate = 4
 }
 
@@ -488,6 +488,75 @@ SMODS.Consumable {
 
         if context.end_of_round then
             card.ability.extra.current_chips = card.ability.extra.initial_chips
+        end
+
+    end,
+    keep_on_use = function (self, card)
+        return true
+    end,
+    can_use = function (self, card)
+        if not card.ability.extra.used and G.hand and G.hand.cards then
+            return G.GAME.blind and G.GAME.blind.chips > 0
+        end
+        return false
+    end
+}
+
+SMODS.Consumable {
+    key = "nylahs_intervention",
+    set = "spells",
+    loc_txt = {
+		name = 'Nylah\'s Intervention',
+		text = {
+            "Next hand gains {X:chips,C:white}X#1#{} Chips",
+            "increased by {X:chips,C:white}X#2#{} for each",
+            "scored card this round"
+		}
+	},
+	atlas = 'TherosBD_spells',
+    pos = {x = 9 , y = 0},
+    cost = 3,
+    config = { extra = { initial_xchips = 1.5, current_xchips = 1.5, xchips_increase = 0.1, used = false} },
+    loc_vars = function(self, info_queue, card)
+		return { vars = { card.ability.extra.current_xchips, card.ability.extra.xchips_increase } }
+	end,
+    use = function(self, card, area, copier)
+
+        card.ability.extra.used = true
+
+        local eval = function() return card.ability.extra.used end
+        juice_card_until(card, eval, true)
+
+    end,
+    calculate = function (self, card, context)
+
+        if context.individual and context.cardarea == G.play then
+
+            card.ability.extra.current_xchips = card.ability.extra.current_xchips + card.ability.extra.xchips_increase
+
+        end
+
+        if context.joker_main and card.ability.extra.used then
+            return {
+				x_chips = card.ability.extra.current_xchips
+		    }
+        end
+        
+        if context.after and card.ability.extra.used then
+
+            G.E_MANAGER:add_event(Event({
+                trigger = 'after',
+                delay = 0.2,
+                func = function()
+                    SMODS.destroy_cards(card,true)
+                    return true
+                end
+            }))
+
+        end
+
+        if context.end_of_round then
+            card.ability.extra.current_xchips = card.ability.extra.initial_xchips
         end
 
     end,
