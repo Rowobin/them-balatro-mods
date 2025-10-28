@@ -603,7 +603,7 @@ SMODS.Joker {
 	blueprint_compat = true,
 	atlas = 'TherosBD',
 	pos = { x = 4, y = 1 },
-	cost = 4,
+	cost = 3,
 	config = { extra = { xchips = 2, extra_hands = 1} },
 	loc_vars = function(self, info_queue, card)
 		return { vars = { card.ability.extra.xchips, card.ability.extra.extra_hands } }
@@ -692,7 +692,7 @@ SMODS.Joker {
 	blueprint_compat = true,
 	atlas = 'TherosBD',
 	pos = { x = 0, y = 2 },
-	cost = 5,
+	cost = 3,
 	config = { extra = { xmult = 2, extra_discards = 1} },
 	loc_vars = function(self, info_queue, card)
 		return { vars = { card.ability.extra.xmult, card.ability.extra.extra_discards } }
