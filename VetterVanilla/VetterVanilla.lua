@@ -1,1 +1,1 @@
-assert(SMODS.load_file("src/ModdedVanilla.lua"))()
+assert(SMODS.load_file("src/jokers.lua"))()
