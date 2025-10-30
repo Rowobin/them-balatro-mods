@@ -23,6 +23,7 @@ SMODS.Joker {
     atlas = "ModdedJokers",
     pos = { x = 0, y = 0 },
     cost = 8,
+    blueprint_compat = true,
     calculate = function(self, card, context)
         if context.individual and context.cardarea == G.play then
             if context.other_card:get_id() == 8 or context.other_card:get_id() == 4 or context.other_card:get_id() == 2 then
@@ -54,6 +55,7 @@ SMODS.Joker {
     atlas = "ModdedJokers",
     pos = { x = 1, y = 0 },
     cost = 6,
+    blueprint_compat = true,
     calculate = function(self, card, context)
         if context.round_eval then
             if G.GAME.chips / G.GAME.blind.chips >= 2.0 then
