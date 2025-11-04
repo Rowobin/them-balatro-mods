@@ -1,6 +1,9 @@
 # Visual studio code configs and stuff
 .vscode/*
 
+# Obsidian configs and stuff
+.obsidian/*
+
 # Paint.net files :P
 *.pdn
 

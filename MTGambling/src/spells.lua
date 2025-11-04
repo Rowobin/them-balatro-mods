@@ -571,6 +571,66 @@ SMODS.Consumable {
     end
 }
 
+local ease_dollars_ref = ease_dollars
+
+function ease_dollars(mod, instant)
+    ease_dollars_ref(mod,instant)
+
+    if (not G.GAME.mtgg_dollars_earned_ante) then
+        G.GAME.mtgg_dollars_earned_ante = 0
+    end
+
+    if (G.GAME.mtgg_dollars_earned_ante and mod > 0) then
+        G.GAME.mtgg_dollars_earned_ante = G.GAME.mtgg_dollars_earned_ante + mod
+    end
+end
+
+local ease_ante_ref = ease_ante
+
+function ease_ante(mod)
+    ease_ante_ref(mod)
+    G.GAME.mtgg_dollars_earned_ante = 0
+end
+
+
+SMODS.Consumable {
+    key = "heliods_intervention",
+    set = "spells",
+    loc_txt = {
+		name = 'Heliod\'s Intervention',
+		text = {
+            "Gain money equal to the",
+            "amount of money gained this ante",
+            "{C:inactive}(Max of {C:money}$#1#{C:inactive})",
+            "{C:inactive}(Currently: #1#$){}"
+		}
+	},
+	atlas = 'TherosBD_spells',
+    pos = {x = 0 , y = 1},
+    cost = 3,
+    config = { extra = { max_money = 30} },
+    loc_vars = function(self, info_queue, card)
+        local money = G.GAME.mtgg_dollars_earned_ante or 0
+		return { vars = { money } }
+	end,
+    use = function(self, card, area, copier)
+        G.E_MANAGER:add_event(Event({
+            trigger = 'after',
+            delay = 0.4,
+            func = function()
+                play_sound('timpani')
+                card:juice_up(0.3, 0.5)
+                ease_dollars(math.max(G.GAME.mtgg_dollars_earned_ante,card.ability.extra.max_money), true)
+                return true
+            end
+        }))
+        delay(0.6)
+    end,
+    can_use = function(self, card)
+        return true
+    end
+}
+
 function get_name_from_id(id)
     if id <= 10 then
         return id
