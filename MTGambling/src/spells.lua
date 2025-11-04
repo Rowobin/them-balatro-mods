@@ -600,9 +600,9 @@ SMODS.Consumable {
 		name = 'Heliod\'s Intervention',
 		text = {
             "Gain money equal to the",
-            "amount of money gained this ante",
-            "{C:inactive}(Max of {C:money}$#1#{C:inactive})",
-            "{C:inactive}(Currently: #1#$){}"
+            "amount of money gained",
+            "this ante {C:inactive}(Max of {C:money}$#2#{C:inactive})",
+            "{C:inactive}(Currently: {C:money}#1#${C:inactive})"
 		}
 	},
 	atlas = 'TherosBD_spells',
@@ -611,7 +611,7 @@ SMODS.Consumable {
     config = { extra = { max_money = 30} },
     loc_vars = function(self, info_queue, card)
         local money = G.GAME.mtgg_dollars_earned_ante or 0
-		return { vars = { money } }
+		return { vars = { math.min(G.GAME.mtgg_dollars_earned_ante,card.ability.extra.max_money), card.ability.extra.max_money } }
 	end,
     use = function(self, card, area, copier)
         G.E_MANAGER:add_event(Event({
@@ -620,7 +620,7 @@ SMODS.Consumable {
             func = function()
                 play_sound('timpani')
                 card:juice_up(0.3, 0.5)
-                ease_dollars(math.max(G.GAME.mtgg_dollars_earned_ante,card.ability.extra.max_money), true)
+                ease_dollars(math.min(G.GAME.mtgg_dollars_earned_ante,card.ability.extra.max_money), true)
                 return true
             end
         }))
