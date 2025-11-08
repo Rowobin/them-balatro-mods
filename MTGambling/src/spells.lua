@@ -339,7 +339,6 @@ SMODS.Consumable {
     use = function(self, card, area, copier)
 
         local destroy_cards = {}
-        local rank_down_cards = {}
         for _, highlighted_card in pairs(G.hand.highlighted) do
             if (highlighted_card:get_id()-card.ability.extra.rank_decrease < card.ability.extra.destroy_threshold) then
                 destroy_cards[#destroy_cards+1] = highlighted_card
@@ -611,16 +610,17 @@ SMODS.Consumable {
     config = { extra = { max_money = 30} },
     loc_vars = function(self, info_queue, card)
         local money = G.GAME.mtgg_dollars_earned_ante or 0
-		return { vars = { math.min(G.GAME.mtgg_dollars_earned_ante,card.ability.extra.max_money), card.ability.extra.max_money } }
+		return { vars = { math.min(money,card.ability.extra.max_money), card.ability.extra.max_money } }
 	end,
     use = function(self, card, area, copier)
+        local money = G.GAME.mtgg_dollars_earned_ante or 0
         G.E_MANAGER:add_event(Event({
             trigger = 'after',
             delay = 0.4,
             func = function()
                 play_sound('timpani')
                 card:juice_up(0.3, 0.5)
-                ease_dollars(math.min(G.GAME.mtgg_dollars_earned_ante,card.ability.extra.max_money), true)
+                ease_dollars(math.min(money,card.ability.extra.max_money), true)
                 return true
             end
         }))
@@ -630,6 +630,163 @@ SMODS.Consumable {
         return true
     end
 }
+
+local eval_card_ref = eval_card
+
+function eval_card(card, context)
+    
+    if (context.remove_playing_cards and context.removed and #context.removed > 0) then
+        
+        for _, value in pairs(context.removed) do
+            if card == value then
+                
+                if (not G.GAME.mtgg_cards_destroyed) then
+                    G.GAME.mtgg_cards_destroyed = 0
+                end
+                G.GAME.mtgg_cards_destroyed = G.GAME.mtgg_cards_destroyed + 1
+
+            end
+        end
+
+    end
+
+    return eval_card_ref(card,context)
+    
+end
+
+SMODS.Consumable {
+    key = "erebos_intervention",
+    set = "spells",
+    loc_txt = {
+		name = 'Erebos\' Intervention',
+		text = {
+            "Reduce {C:attention}rank{} of selected card",
+            "by {C:attention}#1#{} and gain {C:money}#1#${}.",
+            "If the card's rank would go below {C:attention}#5#{}",
+            "destroy it instead.",
+            "Value increases by {C:attention}#4#{} for each card",
+            "destroyed this run {C:inactive}(Max: #2#)"
+		}
+	},
+	atlas = 'TherosBD_spells',
+    pos = {x = 2 , y = 1},
+    cost = 3,
+    config = { extra = { max_decrease = 13 , initial_value = 1, increase_multiplier = 1, destroy_threshold = 2} },
+    loc_vars = function(self, info_queue, card)
+        local destroyed_count = card.ability.extra.initial_value
+        if (G.GAME.mtgg_cards_destroyed) then
+            destroyed_count = destroyed_count + G.GAME.mtgg_cards_destroyed*card.ability.extra.increase_multiplier
+        end
+		return { vars = { math.min(destroyed_count,card.ability.extra.max_decrease), card.ability.extra.max_decrease, card.ability.extra.initial_value, card.ability.extra.increase_multiplier, card.ability.extra.destroy_threshold } }
+	end,
+    use = function(self, card, area, copier)
+
+        local destroyed_count = card.ability.extra.initial_value
+        if (G.GAME.mtgg_cards_destroyed) then
+            destroyed_count = destroyed_count + G.GAME.mtgg_cards_destroyed*card.ability.extra.increase_multiplier
+        end
+
+        local destroy_cards = {}
+        for _, highlighted_card in pairs(G.hand.highlighted) do
+            if (highlighted_card:get_id()-destroyed_count < card.ability.extra.destroy_threshold) then
+                destroy_cards[#destroy_cards+1] = highlighted_card
+            else
+                assert(SMODS.modify_rank(highlighted_card,-destroyed_count))
+                G.E_MANAGER:add_event(Event({
+                trigger = 'after',
+                delay = 0.2,
+                func = function()
+                    play_sound('timpani')
+                    highlighted_card:juice_up()
+                    return true
+                end
+            }))
+            end
+        end
+
+        if #destroy_cards > 0 then
+            G.E_MANAGER:add_event(Event({
+                trigger = 'after',
+                delay = 0.2,
+                func = function()
+                    SMODS.destroy_cards(destroy_cards)
+                    return true
+                end
+            }))
+        end
+
+        G.E_MANAGER:add_event(Event({
+            trigger = 'after',
+            delay = 0.2,
+            func = function()
+                G.hand:unhighlight_all()
+                return true
+            end
+        }))
+
+        G.E_MANAGER:add_event(Event({
+            trigger = 'after',
+            delay = 0.2,
+            func = function()
+                play_sound('timpani')
+                card:juice_up(0.3, 0.5)
+                ease_dollars(math.min(destroyed_count,card.ability.extra.max_decrease), true)
+                return true
+            end
+        }))
+
+        delay(0.6)
+    end,
+    can_use = function (self, card)
+        return G.hand and #G.hand.highlighted > 0 and #G.hand.highlighted <= 1
+    end
+}
+
+SMODS.Consumable {
+    key = "thassa_intervention",
+    set = "spells",
+    loc_txt = {
+		name = 'Thassa\'s Intervention',
+		text = {
+            "Draw all cards with the same",
+            "{C:attention}rank{} as the selected card in",
+            "the top {C:attention}#1#{} cards of the deck",
+            "for each remaining {C:blue}hand{}"
+		}
+	},
+	atlas = 'TherosBD_spells',
+    pos = {x = 4 , y = 1},
+    cost = 3,
+    config = { extra = { lookup_count = 3} },
+    loc_vars = function(self, info_queue, card)
+		return { vars = { card.ability.extra.lookup_count } }
+	end,
+    use = function(self, card, area, copier)
+        
+        local total_lookup = math.min((card.ability.extra.lookup_count * G.GAME.current_round.hands_left),#G.deck.cards)
+        local selected_card_id = G.hand.highlighted[1]:get_id()
+
+        for i = 1,total_lookup, 1 do
+            if (G.deck.cards[i]:get_id() == selected_card_id) then
+                draw_card(G.deck,G.hand, 100,'up', true,G.deck.cards[i])
+            end
+        end
+
+        G.E_MANAGER:add_event(Event({
+            trigger = 'after',
+            delay = 0.2,
+            func = function()
+                G.hand:unhighlight_all()
+                return true
+            end
+        }))
+
+    end,
+    can_use = function (self, card)
+        return G.deck and G.hand and #G.hand.highlighted > 0 and #G.hand.highlighted <= 1 and G.GAME.blind and G.GAME.blind.chips > 0
+    end
+}
+
 
 function get_name_from_id(id)
     if id <= 10 then
