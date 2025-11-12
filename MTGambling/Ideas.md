@@ -1,8 +1,19 @@
 Markdown file with ideas of content to be added to the MTGGambling mod.
+
+## Decks
+
+Decks to be added to the mod
+
+**Commander Deck**
+- Start with a negative eternal MTGG Joker
 ## Jokers
 
 Jokers to be added to the mod.
 ### Creatures
+
+**Polukranos, Unchained**
+- **Transient** x1.5 **MULT** I gain 0.5x mult for each time I'm sold or destroyed
+- **Transient:** I may appear multiple times
 
 ### Enchantments/Artifacts
 

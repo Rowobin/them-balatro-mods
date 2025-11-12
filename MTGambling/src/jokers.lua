@@ -624,7 +624,7 @@ SMODS.Joker {
 			}
 		end
 
-		if context.end_of_round and not context.blueprint then
+		if context.end_of_round and context.cardarea == G.jokers and not context.blueprint then
 			SMODS.destroy_cards(card, nil, nil, true)
 			G.GAME.pool_flags.uro_bound_destroyed = true
 			return {
@@ -713,8 +713,8 @@ SMODS.Joker {
 			}
 		end
 
-		if context.end_of_round and not context.blueprint then
-			SMODS.destroy_cards(card, nil, nil, true)
+		if context.end_of_round and context.cardarea == G.jokers and not context.blueprint then
+			SMODS.destroy_cards(card, nil, nil)
 			G.GAME.pool_flags.kroxa_bound_destroyed = true
 			return {
 				message = "Escaped!"
@@ -772,3 +772,4 @@ function Get_hand_planet(hand)
 			end
 	print("No planet found for hand " .. hand)
 end
+
