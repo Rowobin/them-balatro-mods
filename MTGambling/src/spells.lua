@@ -230,8 +230,9 @@ SMODS.Consumable {
                 destroy_amount = #G.deck.cards
             end
 
-            for i = 1, card.ability.extra.amount, 1 do
-                destroy_cards[#destroy_cards+1] = G.deck.cards[i]
+            for i = 0, card.ability.extra.amount-1, 1 do
+                print(G.deck.cards[i]:get_id())
+                destroy_cards[#destroy_cards+1] = G.deck.cards[#G.deck.cards-i]
             end
         end
         
@@ -738,7 +739,7 @@ SMODS.Consumable {
         delay(0.6)
     end,
     can_use = function (self, card)
-        return G.hand and #G.hand.highlighted > 0 and #G.hand.highlighted <= 1
+        return G.hand and #G.hand.highlighted == 1
     end
 }
 
@@ -766,8 +767,8 @@ SMODS.Consumable {
         local total_lookup = math.min((card.ability.extra.lookup_count * G.GAME.current_round.hands_left),#G.deck.cards)
         local selected_card_id = G.hand.highlighted[1]:get_id()
 
-        for i = 1,total_lookup, 1 do
-            if (G.deck.cards[i]:get_id() == selected_card_id) then
+        for i = 0,total_lookup-1, 1 do
+            if (G.deck.cards[#G.deck.cards-i]:get_id() == selected_card_id) then
                 draw_card(G.deck,G.hand, 100,'up', true,G.deck.cards[i])
             end
         end
@@ -783,7 +784,182 @@ SMODS.Consumable {
 
     end,
     can_use = function (self, card)
-        return G.deck and G.hand and #G.hand.highlighted > 0 and #G.hand.highlighted <= 1 and G.GAME.blind and G.GAME.blind.chips > 0
+        return G.deck and G.hand and #G.hand.highlighted == 1 and G.GAME.blind and G.GAME.blind.chips > 0
+    end
+}
+
+SMODS.Consumable {
+    key = "karametra_blessing",
+    set = "spells",
+    loc_txt = {
+		name = 'Karametra\'s Blessing',
+		text = {
+            "Selected card can't be {C:attention}disabled{}",
+            "and is {C:attention}retrigged{} when",
+            "scored this round"
+		}
+	},
+	atlas = 'TherosBD_spells',
+    pos = {x = 1 , y = 1},
+    cost = 2,
+    config = { extra = { used = false, card_id = nil} },
+    use = function(self, card, area, copier)
+
+        card.ability.extra.used = true
+
+        card.ability.extra.card_id = G.hand.highlighted[1].unique_val
+
+        G.hand.highlighted[1]:set_debuff(false)
+
+        local eval = function() return card.ability.extra.used end
+        juice_card_until(card, eval, true)
+
+        G.E_MANAGER:add_event(Event({
+            trigger = 'after',
+            delay = 0.2,
+            func = function()
+                G.hand:unhighlight_all()
+                return true
+            end
+        }))
+
+    end,
+    calculate = function (self, card, context)
+
+        if context.repetition and context.cardarea == G.play and context.other_card.unique_val == card.ability.extra.card_id then
+            return {
+                repetitions = 1
+            }
+        end
+        
+        if context.after and card.ability.extra.used then
+
+            G.E_MANAGER:add_event(Event({
+                trigger = 'after',
+                delay = 0.2,
+                func = function()
+                    SMODS.destroy_cards(card,true)
+                    return true
+                end
+            }))
+
+        end
+
+    end,
+    keep_on_use = function (self, card)
+        return true
+    end,
+    can_use = function (self, card)
+        return G.deck and G.hand and #G.hand.highlighted == 1 and G.GAME.blind and G.GAME.blind.chips > 0
+    end
+}
+
+SMODS.Consumable {
+    key = "final_death",
+    set = "spells",
+    loc_txt = {
+		name = 'Final Death',
+		text = {
+            "Destroy selected",
+            "card or Joker",
+            "{C:inactive}(ignores {C:attention}Eternal{C:inactive})"
+		}
+	},
+	atlas = 'TherosBD_spells',
+    pos = {x = 3 , y = 1},
+    cost = 4,
+    use = function(self, card, area, copier)
+
+        if (#G.hand.highlighted == 1) then
+           G.E_MANAGER:add_event(Event({
+                trigger = 'after',
+                delay = 0.2,
+                func = function()
+                    SMODS.destroy_cards(G.hand.highlighted[1],true)
+                    return true
+                end
+            }))
+        else
+            G.E_MANAGER:add_event(Event({
+                trigger = 'after',
+                delay = 0.2,
+                func = function()
+                    SMODS.destroy_cards(G.jokers.highlighted[1],true)
+                    return true
+                end
+            }))
+        end
+
+    end,
+    can_use = function (self, card)
+        return G.hand and G.jokers and (#G.hand.highlighted + #G.jokers.highlighted) == 1
+    end
+}
+
+SMODS.Consumable {
+    key = "thirst_for_meaning",
+    set = "spells",
+    loc_txt = {
+		name = 'Thirst for Meaning',
+		text = {
+            "Draw {C:attention}#1#{} cards",
+            "If you didnt draw a {C:attention}4{} or {C:attention}2{}",
+            "{C:red}discard{} the {C:attention}#2#{} highest cards"
+		}
+	},
+	atlas = 'TherosBD_spells',
+    config = { extra = { draw_count = 3, discard_count = 2} },
+    loc_vars = function(self, info_queue, card)
+		return { vars = { card.ability.extra.draw_count, card.ability.extra.discard_count } }
+	end,
+    pos = {x = 5 , y = 1},
+    cost = 2,
+    use = function(self, card, area, copier)
+
+        local draw_amount = math.min(card.ability.extra.draw_count,#G.deck.cards)
+
+        local meaning_found = false
+        for i = 0, draw_amount-1, 1 do
+            local look_up_card_rank = G.deck.cards[#G.deck.cards-i]:get_id()
+            if (look_up_card_rank == 2 or look_up_card_rank == 4) then
+                meaning_found = true
+                break
+            end
+        end
+
+        SMODS.draw_cards(draw_amount)
+
+        if (not meaning_found) then
+            
+            G.E_MANAGER:add_event(Event({
+                func = function()
+                    local any_selected = nil
+                    local _cards = {}
+                    for _, playing_card in ipairs(G.hand.cards) do
+                        _cards[#_cards + 1] = playing_card
+                    end
+                    local function sortingFunction(card1, card2) 
+                        return card1:get_id() < card2:get_id()
+                    end
+                    table.sort(_cards, sortingFunction)
+                    for i = 1, card.ability.extra.discard_count do
+                        if G.hand.cards[i] then
+                            G.hand:add_to_highlighted(G.hand.cards[i], true)
+                            table.remove(_cards, card_index)
+                            any_selected = true
+                            play_sound('card1', 1)
+                        end
+                    end
+                    if any_selected then G.FUNCS.discard_cards_from_highlighted(nil, true) end
+                    return true
+                end
+        }))
+
+        end
+
+    end,
+    can_use = function (self, card)
+        return G.deck and G.hand and G.GAME.blind and G.GAME.blind.chips > 0
     end
 }
 

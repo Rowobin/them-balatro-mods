@@ -31,8 +31,6 @@ SMODS.Back {
 
         local random_joker = pseudorandom_element(jokers_table)
 
-        print(random_joker)
-
         if (random_joker) then
             delay(0.4)
             G.E_MANAGER:add_event(Event({
