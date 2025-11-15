@@ -1,6 +1,6 @@
 SMODS.ConsumableType {
     key = 'spells',
-    default = 'c_spells',
+    default = 'c_mtgg_infuriate',
     loc_txt = {
  		name = 'Spell',
  		collection = 'Spells',
@@ -430,7 +430,7 @@ SMODS.Consumable {
 }
 
 SMODS.Consumable {
-    key = "klothys_desing",
+    key = "klothys_design",
     set = "spells",
     loc_txt = {
 		name = 'Klothys\' Design',
@@ -960,6 +960,161 @@ SMODS.Consumable {
     end,
     can_use = function (self, card)
         return G.deck and G.hand and G.GAME.blind and G.GAME.blind.chips > 0
+    end
+}
+
+SMODS.Consumable {
+    key = "final_flare",
+    set = "spells",
+    loc_txt = {
+		name = 'Final Flare',
+		text = {
+            "Select {C:attention}2{} cards, destroy",
+            "the {C:attention}left{} card and",
+            "reduce the rank of the {C:attention}right{} card",
+            "by the {C:attention}left{} card's rank"
+		}
+	},
+	atlas = 'TherosBD_spells',
+    pos = {x = 6 , y = 1},
+    cost = 4,
+    use = function(self, card, area, copier)
+
+        local leftmost_rank = G.hand.highlighted[1]:get_id()
+        G.E_MANAGER:add_event(Event({
+                trigger = 'after',
+                delay = 0.2,
+                func = function()
+                    SMODS.destroy_cards(G.hand.highlighted[1],true)
+                    return true
+                end
+        }))
+
+        local rightmost_card = G.hand.highlighted[2]
+        assert(SMODS.modify_rank(rightmost_card,-leftmost_rank))
+                G.E_MANAGER:add_event(Event({
+                trigger = 'after',
+                delay = 0.2,
+                func = function()
+                    play_sound('timpani')
+                    rightmost_card:juice_up()
+                    return true
+                end
+        }))
+
+
+    end,
+    can_use = function (self, card)
+        return G.hand and #G.hand.highlighted == 2
+    end
+}
+
+SMODS.Consumable {
+    key = "infuriate",
+    set = "spells",
+    loc_txt = {
+		name = 'Infuriate',
+		text = {
+            "Select {C:attention}#2#{} cards",
+            "they permanently gain {C:mult}+#1#{} mult",
+		}
+	},
+	atlas = 'TherosBD_spells',
+    pos = {x = 7 , y = 1},
+    config = { extra = { mult_amount = 3, selected_count = 1} },
+    loc_vars = function(self, info_queue, card)
+		return { vars = { card.ability.extra.mult_amount, card.ability.extra.selected_count } }
+	end,
+    cost = 3,
+    use = function(self, card, area, copier)
+
+        for _, selected_card in ipairs(G.hand.highlighted) do
+            selected_card.ability.perma_mult = (selected_card.ability.perma_mult or 0) + card.ability.extra.mult_amount
+            G.E_MANAGER:add_event(Event({
+            trigger = 'after',
+            delay = 0.2,
+            func = function()
+                play_sound('timpani')
+                card:juice_up()
+                selected_card:juice_up()
+                return true
+            end
+        }))
+        end
+
+
+    end,
+    can_use = function (self, card)
+        return G.hand and #G.hand.highlighted == card.ability.extra.selected_count
+    end
+}
+
+SMODS.Consumable {
+    key = "gift_of_nature",
+    set = "spells",
+    loc_txt = {
+		name = 'Gift of Nature',
+		text = {
+            "Select {C:attention}#2#{} cards",
+            "they permanently gain {C:chips}+#1#{} chips",
+		}
+	},
+	atlas = 'TherosBD_spells',
+    pos = {x = 8 , y = 1},
+    config = { extra = { chips_amount = 15, selected_count = 1} },
+    loc_vars = function(self, info_queue, card)
+		return { vars = { card.ability.extra.chips_amount, card.ability.extra.selected_count } }
+	end,
+    cost = 2,
+    use = function(self, card, area, copier)
+
+        for _, selected_card in ipairs(G.hand.highlighted) do
+            selected_card.ability.perma_bonus = (selected_card.ability.perma_bonus or 0) + card.ability.extra.chips_amount
+            G.E_MANAGER:add_event(Event({
+            trigger = 'after',
+            delay = 0.2,
+            func = function()
+                play_sound('timpani')
+                card:juice_up()
+                selected_card:juice_up()
+                return true
+            end
+        }))
+        end
+
+
+    end,
+    can_use = function (self, card)
+        return G.hand and #G.hand.highlighted == card.ability.extra.selected_count
+    end
+}
+
+SMODS.Consumable {
+    key = "inspiring_awe",
+    set = "spells",
+    loc_txt = {
+		name = 'Inspiring Awe',
+		text = {
+            "Disable current {C:attention}boss blind{}",
+            "{C:inactive}(I don't show up in shop again){}",
+		}
+	},
+	atlas = 'TherosBD_spells',
+    no_pool_flag = "inspiring_awe_used",
+    pos = {x = 9 , y = 1},
+    config = { extra = { chips_amount = 15, selected_count = 1} },
+    loc_vars = function(self, info_queue, card)
+		return { vars = { card.ability.extra.chips_amount, card.ability.extra.selected_count } }
+	end,
+    cost = 2,
+    use = function(self, card, area, copier)
+
+        G.GAME.pool_flags.inspiring_awe_used = true
+        G.GAME.blind:disable()
+
+    end,
+    can_use = function (self, card)
+        return G.GAME.blind and not G.GAME.blind.disabled and G.GAME.blind.boss
     end
 }
 
