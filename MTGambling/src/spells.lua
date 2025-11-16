@@ -231,7 +231,6 @@ SMODS.Consumable {
             end
 
             for i = 0, card.ability.extra.amount-1, 1 do
-                print(G.deck.cards[i]:get_id())
                 destroy_cards[#destroy_cards+1] = G.deck.cards[#G.deck.cards-i]
             end
         end
@@ -825,6 +824,13 @@ SMODS.Consumable {
 
     end,
     calculate = function (self, card, context)
+
+        if context.debuff_card and context.debuff_card.area ~= G.jokers and context.debuff_card.unique_val == card.ability.extra.card_id then
+                return {
+                    prevent_debuff = true
+                }
+        end
+
 
         if context.repetition and context.cardarea == G.play and context.other_card.unique_val == card.ability.extra.card_id then
             return {
