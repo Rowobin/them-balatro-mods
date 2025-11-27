@@ -768,7 +768,7 @@ SMODS.Consumable {
 
         for i = 0,total_lookup-1, 1 do
             if (G.deck.cards[#G.deck.cards-i]:get_id() == selected_card_id) then
-                draw_card(G.deck,G.hand, 100,'up', true,G.deck.cards[i])
+                draw_card(G.deck,G.hand, 100,'up', true,G.deck.cards[#G.deck.cards-i])
             end
         end
 
@@ -976,39 +976,80 @@ SMODS.Consumable {
 		name = 'Final Flare',
 		text = {
             "Select {C:attention}2{} cards, destroy",
-            "the {C:attention}left{} card and",
-            "reduce the rank of the {C:attention}right{} card",
-            "by the {C:attention}left{} card's rank"
+            "the {C:attention}right{} card and",
+            "reduce the rank of the {C:attention}left{} card",
+            "by the {C:attention}right{} card's rank"
 		}
 	},
 	atlas = 'TherosBD_spells',
     pos = {x = 6 , y = 1},
     cost = 4,
     use = function(self, card, area, copier)
-
-        local leftmost_rank = G.hand.highlighted[1]:get_id()
         G.E_MANAGER:add_event(Event({
+            trigger = 'after',
+            delay = 0.4,
+            func = function()
+                play_sound('tarot1')
+                card:juice_up(0.3, 0.5)
+                return true
+            end
+        }))
+        for i = 1, #G.hand.highlighted do
+            local percent = 1.15 - (i - 0.999) / (#G.hand.highlighted - 0.998) * 0.3
+            G.E_MANAGER:add_event(Event({
                 trigger = 'after',
-                delay = 0.2,
+                delay = 0.15,
                 func = function()
-                    SMODS.destroy_cards(G.hand.highlighted[1],true)
+                    G.hand.highlighted[i]:flip()
+                    play_sound('card1', percent)
+                    G.hand.highlighted[i]:juice_up(0.3, 0.3)
                     return true
                 end
-        }))
-
-        local rightmost_card = G.hand.highlighted[2]
-        assert(SMODS.modify_rank(rightmost_card,-leftmost_rank))
-                G.E_MANAGER:add_event(Event({
+            }))
+        end
+        delay(0.2)
+        local leftmost = G.hand.highlighted[1]
+        for i = 1, #G.hand.highlighted do
+            if G.hand.highlighted[i].T.x < leftmost.T.x then
+                leftmost = G.hand.highlighted[i]
+            end
+        end
+        for i = 1, #G.hand.highlighted do
+            G.E_MANAGER:add_event(Event({
                 trigger = 'after',
-                delay = 0.2,
+                delay = 0.1,
                 func = function()
-                    play_sound('timpani')
-                    rightmost_card:juice_up()
+                    if G.hand.highlighted[i] ~= leftmost then
+                        local amount = G.hand.highlighted[i]:get_id()
+                        SMODS.destroy_cards(G.hand.highlighted[i])
+                        assert(SMODS.modify_rank(leftmost,-amount))
+                    end
                     return true
                 end
+            }))
+        end
+        for i = 1, #G.hand.highlighted do
+            local percent = 0.85 + (i - 0.999) / (#G.hand.highlighted - 0.998) * 0.3
+            G.E_MANAGER:add_event(Event({
+                trigger = 'after',
+                delay = 0.15,
+                func = function()
+                    G.hand.highlighted[i]:flip()
+                    play_sound('tarot2', percent, 0.6)
+                    G.hand.highlighted[i]:juice_up(0.3, 0.3)
+                    return true
+                end
+            }))
+        end
+        G.E_MANAGER:add_event(Event({
+            trigger = 'after',
+            delay = 0.2,
+            func = function()
+                G.hand:unhighlight_all()
+                return true
+            end
         }))
-
-
+        delay(0.5)
     end,
     can_use = function (self, card)
         return G.hand and #G.hand.highlighted == 2
